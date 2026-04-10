@@ -183,7 +183,9 @@ jobs:
             LABEL_FLAGS=()
             IFS=',' read -ra LABELS <<< "$PR_LABELS"
             for label in "${LABELS[@]}"; do
-              LABEL_FLAGS+=(--add-label "$(echo "$label" | xargs)")
+              label=$(echo "$label" | xargs)
+              gh label create "$label" --force 2>/dev/null || true
+              LABEL_FLAGS+=(--add-label "$label")
             done
             gh pr edit "$PR_NUMBER" "${LABEL_FLAGS[@]}"
           fi
