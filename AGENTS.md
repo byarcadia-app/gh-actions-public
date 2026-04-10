@@ -31,7 +31,7 @@ gh-actions-public/
 
 ### Skill sync
 
-- **sync-skill-to-hub** (push-based) — Source repo pushes a skill to the hub. Checks out both source and hub repos, copies skill directory, runs `deno fmt`, creates/updates PR in hub. Requires `target-repo-token` secret with write access to hub. Inputs: `skill-name`, `skill-path`, `target-repo`, `target-branch`, `target-skills-path`.
+- **sync-skill-to-hub** (push-based) — Source repo pushes a skill to the hub. Checks out both source and hub repos, copies skill directory, optionally formats (default: `deno fmt`), creates/updates PR in hub. Requires `target-repo-token` secret with write access to hub. Inputs: `skill-name`, `skill-path`, `source-ref`, `target-repo`, `target-branch`, `target-skills-path`, `format-command`, `pr-labels`. Outputs: `changed`, `pr-number`, `pr-url`.
 
 ### CI
 

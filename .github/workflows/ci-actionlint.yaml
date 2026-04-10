@@ -4,13 +4,17 @@ on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
 
 jobs:
   actionlint:
+    name: actionlint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Run actionlint
         uses: docker://rhysd/actionlint:latest
         with:
-          args: -color -shellcheck= -ignore SC2086 -ignore SC2129
+          args: -color -ignore SC2129 -ignore SC2086
