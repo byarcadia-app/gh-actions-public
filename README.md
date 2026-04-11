@@ -8,7 +8,70 @@ This is the public counterpart to [`gh-actions`](https://github.com/byarcadia-ap
 
 | Workflow | Description |
 |---|---|
+| [secrets-scan-on-pr](#secrets-scan-on-pr) | TruffleHog secret scan on pull requests |
+| [secrets-scan-on-push](#secrets-scan-on-push) | TruffleHog secret scan on push to main |
 | [sync-skill-to-hub](#sync-skill-to-hub) | Push a skill from source repo to hub via PR |
+
+---
+
+## secrets-scan-on-pr
+
+Runs [TruffleHog](https://github.com/trufflesecurity/trufflehog) against PR commits to detect verified secrets. Two-pass approach: first generates GitHub annotations, then fails the check if any verified secrets are found.
+
+### Inputs
+
+| Name | Description | Required | Default |
+|------|-------------|----------|---------|
+| `trufflehog-version` | TruffleHog container image tag | no | `3.88.28` |
+| `extra-args` | Additional TruffleHog CLI arguments | no | `""` |
+
+### Usage
+
+```yaml
+name: Secrets scan
+
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    uses: byarcadia-app/gh-actions-public/.github/workflows/secrets-scan-on-pr.yaml@main
+```
+
+---
+
+## secrets-scan-on-push
+
+Runs [TruffleHog](https://github.com/trufflesecurity/trufflehog) on push to scan only new commits (using `--since-commit`). Fails if any verified secrets are found.
+
+### Inputs
+
+| Name | Description | Required | Default |
+|------|-------------|----------|---------|
+| `trufflehog-version` | TruffleHog container image tag | no | `3.88.28` |
+| `extra-args` | Additional TruffleHog CLI arguments | no | `""` |
+
+### Usage
+
+```yaml
+name: Secrets scan on push
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    uses: byarcadia-app/gh-actions-public/.github/workflows/secrets-scan-on-push.yaml@main
+```
 
 ---
 
