@@ -30,7 +30,7 @@ on:
         description: "Directory in hub where skills live"
         type: string
         required: false
-        default: "skills"
+        default: "synced-skills/byarcadia"
       format-command:
         description: "Format command to run on synced skill (empty to skip)"
         type: string
@@ -118,6 +118,29 @@ jobs:
           rm -rf "$DEST_DIR"
           cp -r "$SOURCE_DIR" "$DEST_DIR"
 
+      - name: Write SYNC.md
+        working-directory: hub
+        env:
+          SKILL_NAME: ${{ inputs.skill-name }}
+          SKILL_PATH: ${{ inputs.skill-path }}
+          SOURCE_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ github.sha }}
+          TARGET_PATH: ${{ inputs.target-skills-path }}
+          SERVER_URL: ${{ github.server_url }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          cat > "${TARGET_PATH}/${SKILL_NAME}/SYNC.md" <<EOF
+          # Sync Provenance
+
+          | Field         | Value                                               |
+          | ------------- | --------------------------------------------------- |
+          | source_repo   | ${SOURCE_REPO}                                      |
+          | source_path   | ${SKILL_PATH}                                       |
+          | source_commit | ${SOURCE_SHA}                                       |
+          | synced_at     | $(date -u +%Y-%m-%dT%H:%M:%SZ)                     |
+          | workflow_run  | ${SERVER_URL}/${SOURCE_REPO}/actions/runs/${RUN_ID} |
+          EOF
+
       - name: Setup Deno
         if: inputs.format-command != '' && startsWith(inputs.format-command, 'deno')
         uses: denoland/setup-deno@v2
@@ -139,8 +162,8 @@ jobs:
           TARGET_PATH: ${{ inputs.target-skills-path }}
         run: |
           git add "${TARGET_PATH}/${SKILL_NAME}"
-          if git diff --cached --quiet; then
-            echo "::notice::No changes for ${SKILL_NAME}"
+          if git diff --cached --quiet -- . ':(exclude)*/SYNC.md'; then
+            echo "::notice::No real content changes for ${SKILL_NAME} — skipping PR"
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
