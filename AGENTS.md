@@ -19,8 +19,10 @@ gh-actions-public/
 ├── .github/
 │   ├── actionlint.yaml              # actionlint config (no self-hosted runners)
 │   └── workflows/
-│       ├── ci-actionlint.yaml       # CI: lints workflows on PR and push to main
-│       └── sync-skill-to-hub.yaml   # Reusable: push skill from source repo → hub PR
+│       ├── ci-actionlint.yaml        # CI: lints workflows on PR and push to main
+│       ├── secrets-scan-on-pr.yaml   # Reusable: TruffleHog scan for PRs
+│       ├── secrets-scan-on-push.yaml # Reusable: TruffleHog scan for push to main
+│       └── sync-skill-to-hub.yaml    # Reusable: push skill from source repo → hub PR
 ├── .gitignore
 ├── CLAUDE.md
 ├── CONTRIBUTING.md
@@ -28,6 +30,11 @@ gh-actions-public/
 ```
 
 ## Workflows
+
+### Security
+
+- **secrets-scan-on-pr** — Runs TruffleHog container against PR commits. Two-pass: first generates GitHub annotations, second fails on verified secrets. Inputs: `trufflehog-version`, `extra-args`. Caller sets concurrency.
+- **secrets-scan-on-push** — Runs TruffleHog on push using `--since-commit`. Single-pass. Same inputs as PR variant.
 
 ### Skill sync
 
