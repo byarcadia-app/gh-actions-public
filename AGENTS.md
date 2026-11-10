@@ -21,6 +21,7 @@ gh-actions-public/
 │   ├── dependabot.yml               # weekly bumps of the pinned actions
 │   └── workflows/
 │       ├── ci-actionlint.yaml        # CI: lints workflows on PR and push to main
+│       ├── ci-secrets-scan.yaml      # CI: runs both secrets scans on PR and push to main
 │       ├── quality-gate.yaml         # Reusable: one-job pnpm gate, optional secrets scan
 │       ├── secrets-scan-on-pr.yaml   # Reusable: TruffleHog scan for PRs
 │       ├── secrets-scan-on-push.yaml # Reusable: TruffleHog scan for push to main
@@ -49,6 +50,7 @@ gh-actions-public/
 ### CI
 
 - **ci-actionlint** — Internal CI for this repo. Runs `actionlint` via Docker on PRs and pushes to main. Ignores SC2086 and SC2129 shellcheck warnings.
+- **ci-secrets-scan** — Internal CI for this repo. Calls `secrets-scan-on-pr` on PRs and `secrets-scan-on-push` on pushes to main, so a change to a scan, or an action bump inside its TruffleHog container, runs here before the callers at `@main` pick it up.
 
 ## Conventions
 
