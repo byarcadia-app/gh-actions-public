@@ -10,7 +10,7 @@ actionlint    # Lint all workflows — must pass before merge
 
 ## Overview
 
-Public counterpart to `gh-actions` (private). Workflows that need to be callable from public repositories live here, since GitHub does not allow public repos to use reusable workflows from private repos. Callers reference via `uses: byarcadia-app/gh-actions-public/.github/workflows/<name>@main`.
+Public counterpart to `gh-actions` (private). Workflows that need to be callable from public repositories live here, since GitHub does not allow public repos to use reusable workflows from private repos. Callers of `quality-gate` pin a release tag's commit SHA; the other workflows are referenced as `uses: byarcadia-app/gh-actions-public/.github/workflows/<name>@main`.
 
 ## Structure
 
@@ -20,6 +20,7 @@ gh-actions-public/
 │   ├── actionlint.yaml              # actionlint config (no self-hosted runners)
 │   └── workflows/
 │       ├── ci-actionlint.yaml        # CI: lints workflows on PR and push to main
+│       ├── quality-gate.yaml         # Reusable: one-job pnpm gate, optional secrets scan
 │       ├── secrets-scan-on-pr.yaml   # Reusable: TruffleHog scan for PRs
 │       ├── secrets-scan-on-push.yaml # Reusable: TruffleHog scan for push to main
 │       └── sync-skill-to-hub.yaml    # Reusable: push skill from source repo → hub PR
@@ -30,6 +31,10 @@ gh-actions-public/
 ```
 
 ## Workflows
+
+### Gate
+
+- **quality-gate** — One job, so a pull request bills one: checkout, an optional TruffleHog scan of the PR's base..head commits ahead of `pnpm install` (needs `fetch-depth: 0`; the tree is mounted read-only, and a scan that cannot read the repository fails the step), pnpm from `packageManager`, Node, `pnpm install --frozen-lockfile`, then the caller's `run`. Inputs: `node-version`, `run`, `fetch-depth`, `timeout-minutes`, `secrets-scan`, `trufflehog-version`. Caller sets `on:`, concurrency, permissions and the job `if`. Released by a `vX.Y.Z` tag on `main`; a change that breaks a caller is a new major.
 
 ### Security
 

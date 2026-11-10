@@ -1,0 +1,90 @@
+name: Quality gate
+
+# One job that installs a pnpm repository and runs its gate, so a pull request bills one job. The
+# caller keeps its own `on:`, `concurrency`, `permissions` and the job-level `if` that skips drafts
+# and squash merges.
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: "Exact Node version for actions/setup-node"
+        type: string
+        required: true
+      run:
+        description: "The commands the gate runs after `pnpm install`, as one bash script"
+        type: string
+        required: false
+        default: pnpm check
+      fetch-depth:
+        description: "Commits to fetch; 0 fetches the whole history, which secrets-scan needs"
+        type: number
+        required: false
+        default: 1
+      timeout-minutes:
+        description: "Minutes after which the job fails"
+        type: number
+        required: false
+        default: 10
+      secrets-scan:
+        description: "Scan the pull request's commits with TruffleHog before `pnpm install`"
+        type: boolean
+        required: false
+        default: false
+      trufflehog-version:
+        description: "TruffleHog container image tag"
+        type: string
+        required: false
+        default: "3.88.28"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: ${{ inputs.fetch-depth }}
+
+      # Ahead of `pnpm install`, so a verified secret fails the job before any dependency runs. One
+      # pass writes the annotations and fails the step; the tree is mounted read-only. TruffleHog
+      # exits 0 when it cannot read the repository, so the log decides that case. A push to `main`
+      # keeps secrets-scan-on-push.
+      - name: Secrets scan
+        if: inputs.secrets-scan && github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          IMAGE: ghcr.io/trufflesecurity/trufflehog:${{ inputs.trufflehog-version }}
+        run: |
+          if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
+            echo "::error::secrets-scan reads the commits between the pull request's base and head: set fetch-depth: 0"
+            exit 1
+          fi
+          log="$RUNNER_TEMP/trufflehog.log"
+          docker run --rm -v "$PWD:/repo:ro" "$IMAGE" git file:///repo/ \
+            --since-commit "$BASE" --branch "$HEAD" --only-verified --fail --no-update --github-actions 2>&1 | tee "$log"
+          if grep -q 'encountered errors during scan' "$log"; then
+            echo "::error::TruffleHog could not read the commits between the pull request's base and head"
+            exit 1
+          fi
+
+      # No `version:` input: the action reads `packageManager` from package.json.
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check
+        run: ${{ inputs.run }}
+        env:
+          # Node's compile cache, shared by every process the gate starts.
+          NODE_COMPILE_CACHE: ${{ runner.temp }}/node-compile-cache

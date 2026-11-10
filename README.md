@@ -8,9 +8,62 @@ This is the public counterpart to [`gh-actions`](https://github.com/byarcadia-ap
 
 | Workflow | Description |
 |---|---|
+| [quality-gate](#quality-gate) | One job that installs a pnpm repository and runs its gate, with an optional secret scan |
 | [secrets-scan-on-pr](#secrets-scan-on-pr) | TruffleHog secret scan on pull requests |
 | [secrets-scan-on-push](#secrets-scan-on-push) | TruffleHog secret scan on push to main |
 | [sync-skill-to-hub](#sync-skill-to-hub) | Push a skill from source repo to hub via PR |
+
+---
+
+## quality-gate
+
+One job: checkout, an optional [TruffleHog](https://github.com/trufflesecurity/trufflehog) scan of the pull request's commits, pnpm and Node, `pnpm install --frozen-lockfile`, then the caller's commands. GitHub bills each job by the minute, rounded up, so a scan inside the gate's job costs no extra minute, where its own job costs at least one. A verified secret fails the job before any dependency is installed.
+
+### Inputs
+
+| Name | Description | Required | Default |
+|------|-------------|----------|---------|
+| `node-version` | Exact Node version for `actions/setup-node` | yes | — |
+| `run` | The commands the gate runs after `pnpm install`, as one bash script | no | `pnpm check` |
+| `fetch-depth` | Commits to fetch; `0` fetches the whole history | no | `1` |
+| `timeout-minutes` | Minutes after which the job fails | no | `10` |
+| `secrets-scan` | Scan the pull request's commits before `pnpm install`; needs `fetch-depth: 0` | no | `false` |
+| `trufflehog-version` | TruffleHog container image tag | no | `3.88.28` |
+
+pnpm's version comes from `packageManager` in the caller's `package.json`.
+
+### Usage
+
+The caller keeps `on:`, `concurrency`, `permissions` and the job's `if`, and pins a release tag's commit SHA, which Dependabot's `github-actions` ecosystem moves. A caller with `secrets-scan: true` needs no secrets-scan-on-pr workflow; secrets-scan-on-push still covers a direct push to `main`.
+
+```yaml
+name: Quality gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check
+    # A draft runs nothing until it is ready. A squash merge lands on `main` with `(#NN)` in its
+    # subject, and its pull request already ran the gate.
+    if: ${{ !github.event.pull_request.draft && (github.event_name != 'push' || !contains(github.event.head_commit.message, '(#')) }}
+    uses: byarcadia-app/gh-actions-public/.github/workflows/quality-gate.yaml@<sha> # v1.0.0
+    with:
+      node-version: "24.19.0"
+      fetch-depth: 0
+      secrets-scan: true
+```
 
 ---
 
