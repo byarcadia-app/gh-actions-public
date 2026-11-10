@@ -78,8 +78,8 @@ jobs:
 
       # No `cache:`. A caller skips the gate on a squash merge, so only a direct push to `main` saves
       # a store every pull request reads. From there or from a pull request's own earlier run, a
-      # restore costs at least the install time it spares: pnpm's supply-chain check runs alongside
-      # the fetch.
+      # restore costs about the install time it spares, or more: pnpm's supply-chain check runs
+      # alongside the fetch.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ inputs.node-version }}
