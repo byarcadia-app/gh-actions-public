@@ -18,6 +18,7 @@ Public counterpart to `gh-actions` (private). Workflows that need to be callable
 gh-actions-public/
 ├── .github/
 │   ├── actionlint.yaml              # actionlint config (no self-hosted runners)
+│   ├── dependabot.yml               # weekly bumps of the pinned actions
 │   └── workflows/
 │       ├── ci-actionlint.yaml        # CI: lints workflows on PR and push to main
 │       ├── secrets-scan-on-pr.yaml   # Reusable: TruffleHog scan for PRs
@@ -47,6 +48,7 @@ gh-actions-public/
 ## Conventions
 
 - All workflows use `ubuntu-latest` runners (no self-hosted).
+- Every action is pinned to a commit SHA with a `# vX.Y.Z` comment; `.github/dependabot.yml` bumps them weekly. A `docker://` image is pinned to a version tag and bumped by hand.
 - Reusable workflows do NOT set concurrency — the caller controls that.
 - Skill names must be kebab-case (`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`).
 - Input validation includes path traversal prevention for skill paths.
